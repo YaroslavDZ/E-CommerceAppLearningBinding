@@ -6,6 +6,7 @@ namespace E_CommerceAppLearningBinding.CustomValidation
 {
     public class ValidationInvoicePriceAttribute : ValidationAttribute
     {
+        public string DefaultErrorMessage { get; set; } = "Invoice Price should be equal to the total cost of all products (i.e. {0}) in the order.";
         public string Products { get; set; }
         public ValidationInvoicePriceAttribute(string products)
         {
@@ -22,7 +23,7 @@ namespace E_CommerceAppLearningBinding.CustomValidation
 
                 if (listProductsProperty is not null)
                 {
-                    List<Product> products = listProductsProperty.GetValue(validationContext.ObjectInstance) as List<Product>;
+                    List<Product> products = (List<Product>)listProductsProperty.GetValue(validationContext.ObjectInstance)!;
 
                     double calculatedInvoicePrice = 0;
                     foreach (Product product in products)
@@ -33,15 +34,22 @@ namespace E_CommerceAppLearningBinding.CustomValidation
                         }
                     }
 
-                    if (invoicePrice != calculatedInvoicePrice)
+                    if (calculatedInvoicePrice > 0 && invoicePrice != calculatedInvoicePrice)
                     {
-                        return new ValidationResult("InvoicePrice doesn't match with the total cost of the specified products in the order.");
+                        if (invoicePrice != calculatedInvoicePrice)
+                        {
+                            return new ValidationResult(string.Format(ErrorMessage ?? DefaultErrorMessage, calculatedInvoicePrice), new string[] { nameof(validationContext.MemberName) });
+                        }
                     }
                     else
                     {
-                        return ValidationResult.Success;
+                        return new ValidationResult("No products found to validate invoice price", new string[] { nameof(validationContext.MemberName) });
                     }
+
+                    return ValidationResult.Success;
                 }
+
+                return null;
             }
 
             return null;
